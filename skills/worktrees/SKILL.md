@@ -29,13 +29,15 @@ then, we need to check if it is in the `.gitignore` file, if not, we need to add
 grep -qxF '.worktrees' .gitignore || echo '.worktrees' >> .gitignore
 ```
 
-finally, to create a worktree, use the following command:
+finally, to create a worktree, use the following command :
 
 ```bash
 git worktree add .worktrees/<worktree-name> <branch-name>
 ```
 
-always tell the user when creating a worktree, never assume that they know
+then, open a new opencode session in the new worktree :
+
+use `open-new-opencode` tool with directory `.worktrees/<worktree-name>`
 
 ### move to a worktree 
 
@@ -70,6 +72,7 @@ this will show the path and branch name for each worktree
 ### misc.
 
 - always make sure to commit or stash your changes before switching worktrees
+- always tell the user when creating a worktree, never assume that they know
 - never delete a worktree directory manually, always use the git command to remove it 
 - if you delete a branch that has a worktree, you need to remove the worktree first before deleting the branch 
 - worktrees can be used to test different versions of dependencies or configurations without affecting the main branch 
