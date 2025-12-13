@@ -4,10 +4,15 @@ export default tool({
   description: "restart opencode session",
   args: {
     directory: tool.schema.string().optional().describe("Directory to open opencode in"),
+    model: tool.schema.string().optional().describe("Model to use"),
+    prompt: tool.schema.string().optional().describe("Initial prompt"),
   },
-  async execute({ directory }) {
+  async execute({ directory, model, prompt }) {
     try {
-      const command = directory ? `cd "${directory}"; opencode; exec bash` : "opencode; exec bash";
+      let cmd = "opencode";
+      if (model) cmd += ` --model "${model}"`;
+      if (prompt) cmd += ` --prompt "${prompt}"`;
+      const command = directory ? `cd "${directory}"; ${cmd}; exec bash` : `${cmd}; exec bash`;
       const proc = Bun.spawn(["ghostty", "-e", "bash", "-lc", command], {
         env: {
           ...process.env,
