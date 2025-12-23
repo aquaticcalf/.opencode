@@ -4,3 +4,4 @@
 	- please for the love of the god, ask more questions, get more clarity
 	- prefer being sure over making assumptions
 - never make irreversible decisions by your own without asking for explicit permission
+- use the `preview` tool whenever you want to do an irreversible cli operation
