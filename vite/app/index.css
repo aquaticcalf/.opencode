@@ -127,3 +127,51 @@
 		@apply font-sans;
 	}
 }
+
+/* Sidebar smooth animations - Linear style */
+[data-slot="sidebar-wrapper"] {
+	--sidebar-transition-duration: 300ms;
+	--sidebar-transition-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+[data-slot="sidebar-gap"],
+[data-slot="sidebar-container"] {
+	will-change: width, transform;
+}
+
+[data-slot="sidebar-inner"] {
+	will-change: opacity, transform;
+}
+
+/* Smooth content shift when sidebar toggles */
+[data-slot="sidebar-inset"] {
+	transition: margin-left var(--sidebar-transition-duration, 300ms)
+		var(--sidebar-transition-ease, cubic-bezier(0.25, 0.1, 0.25, 1));
+	will-change: margin-left;
+}
+
+/* Custom sleek scrollbar for thread list */
+.custom-scrollbar::-webkit-scrollbar {
+	width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+	background: oklch(0.556 0 0 / 20%);
+	border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+	background: oklch(0.556 0 0 / 40%);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+	background: oklch(0.708 0 0 / 15%);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+	background: oklch(0.708 0 0 / 30%);
+}

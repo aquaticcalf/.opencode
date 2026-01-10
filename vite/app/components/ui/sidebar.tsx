@@ -22,12 +22,15 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 
-const SIDEBAR_COOKIE_NAME = "sidebar_state"
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
+const SIDEBAR_STORAGE_KEY = "sidebar_state"
 const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
+
+// Linear-style smooth animation curve - feels buttery and intentional
+const SIDEBAR_TRANSITION_DURATION = "300ms"
+const SIDEBAR_TRANSITION_EASE = "cubic-bezier(0.25, 0.1, 0.25, 1)"
 
 type SidebarContextProps = {
 	state: "expanded" | "collapsed"
@@ -51,7 +54,7 @@ function useSidebar() {
 }
 
 function SidebarProvider({
-	defaultOpen = true,
+	defaultOpen = false,
 	open: openProp,
 	onOpenChange: setOpenProp,
 	className,
@@ -66,9 +69,13 @@ function SidebarProvider({
 	const isMobile = useIsMobile()
 	const [openMobile, setOpenMobile] = React.useState(false)
 
-	// This is the internal state of the sidebar.
-	// We use openProp and setOpenProp for control from outside the component.
-	const [_open, _setOpen] = React.useState(defaultOpen)
+	const [_open, _setOpen] = React.useState(() => {
+		if (openProp !== undefined) {
+			return openProp
+		}
+		const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY)
+		return stored !== null ? stored === "true" : defaultOpen
+	})
 	const open = openProp ?? _open
 	const setOpen = React.useCallback(
 		(value: boolean | ((value: boolean) => boolean)) => {
@@ -79,9 +86,7 @@ function SidebarProvider({
 				_setOpen(openState)
 			}
 
-			// This sets the cookie to keep the sidebar state.
-			// biome-ignore lint/suspicious/noDocumentCookie: Using document.cookie for sidebar state persistence
-			document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+			localStorage.setItem(SIDEBAR_STORAGE_KEY, String(openState))
 		},
 		[setOpenProp, open],
 	)
@@ -132,6 +137,8 @@ function SidebarProvider({
 					{
 						"--sidebar-width": SIDEBAR_WIDTH,
 						"--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
+						"--sidebar-transition-duration": SIDEBAR_TRANSITION_DURATION,
+						"--sidebar-transition-ease": SIDEBAR_TRANSITION_EASE,
 						...style,
 					} as React.CSSProperties
 				}
@@ -183,12 +190,7 @@ function Sidebar({
 					data-sidebar="sidebar"
 					data-slot="sidebar"
 					data-mobile="true"
-					className="bg-sidebar text-sidebar-foreground w-(--sidebar-width) p-0 [&>button]:hidden"
-					style={
-						{
-							"--sidebar-width": SIDEBAR_WIDTH_MOBILE,
-						} as React.CSSProperties
-					}
+					className="bg-sidebar text-sidebar-foreground !w-screen p-0 [&>button]:hidden"
 					side={side}
 				>
 					<SheetHeader className="sr-only">
@@ -214,18 +216,23 @@ function Sidebar({
 			<div
 				data-slot="sidebar-gap"
 				className={cn(
-					"transition-[width] duration-200 ease-linear relative w-(--sidebar-width) bg-transparent",
+					"relative w-(--sidebar-width) bg-transparent",
 					"group-data-[collapsible=offExamples]:w-0",
 					"group-data-[side=right]:rotate-180",
 					variant === "floating" || variant === "inset"
 						? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
 						: "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
 				)}
+				style={{
+					transitionProperty: "width",
+					transitionDuration: "var(--sidebar-transition-duration)",
+					transitionTimingFunction: "var(--sidebar-transition-ease)",
+				}}
 			/>
 			<div
 				data-slot="sidebar-container"
 				className={cn(
-					"fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex",
+					"fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) md:flex",
 					side === "left"
 						? "left-0 group-data-[collapsible=offExamples]:left-[calc(var(--sidebar-width)*-1)]"
 						: "right-0 group-data-[collapsible=offExamples]:right-[calc(var(--sidebar-width)*-1)]",
@@ -235,12 +242,25 @@ function Sidebar({
 						: "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
 					className,
 				)}
+				style={{
+					transitionProperty: "left, right, width, transform",
+					transitionDuration: "var(--sidebar-transition-duration)",
+					transitionTimingFunction: "var(--sidebar-transition-ease)",
+				}}
 				{...props}
 			>
 				<div
 					data-sidebar="sidebar"
 					data-slot="sidebar-inner"
-					className="bg-sidebar group-data-[variant=floating]:ring-sidebar-border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 flex size-full flex-col"
+					className={cn(
+						"bg-sidebar flex size-full flex-col",
+						"group-data-[variant=floating]:ring-sidebar-border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1",
+					)}
+					style={{
+						transitionProperty: "opacity, transform",
+						transitionDuration: "var(--sidebar-transition-duration)",
+						transitionTimingFunction: "var(--sidebar-transition-ease)",
+					}}
 				>
 					{children}
 				</div>
@@ -398,9 +418,14 @@ function SidebarGroupLabel({
 		props: mergeProps<"div">(
 			{
 				className: cn(
-					"text-sidebar-foreground/70 ring-sidebar-ring h-8 rounded-md px-2 text-xs font-medium transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 flex shrink-0 items-center outline-hidden [&>svg]:shrink-0",
+					"text-sidebar-foreground/70 ring-sidebar-ring h-8 rounded-md px-2 text-xs font-medium group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 flex shrink-0 items-center outline-hidden [&>svg]:shrink-0",
 					className,
 				),
+				style: {
+					transitionProperty: "margin, opacity",
+					transitionDuration: "var(--sidebar-transition-duration)",
+					transitionTimingFunction: "var(--sidebar-transition-ease)",
+				},
 			},
 			props,
 		),
